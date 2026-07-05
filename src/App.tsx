@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { api, createMockToken } from './lib/api'
+import CountUp from './components/CountUp'
+import VariableProximity from './components/VariableProximity'
 import type { JobMatch, Profile } from './types'
 
 gsap.registerPlugin(ScrollTrigger)
@@ -157,7 +159,13 @@ function SkillGraph() {
   )
 }
 
-function DashboardMock() {
+function DashboardMock({ countersActive }: { countersActive: boolean }) {
+  const signalStats = [
+    ['Python', 28500, 0.45],
+    ['Product analytics', 35200, 0.55],
+    ['Workflow design', 24300, 0.65],
+  ] as const
+
   return (
     <div className="dashboard glass-panel relative z-10 mx-auto mt-12 grid h-[30rem] w-[min(70rem,92vw)] grid-cols-[13.5rem_1fr] overflow-hidden rounded-[1.05rem] text-left md:mt-16">
       <aside className="side-rail hidden p-6 text-white md:block">
@@ -194,19 +202,21 @@ function DashboardMock() {
         <div className="mt-9">
           <p className="text-xs font-semibold uppercase tracking-[.16em] text-[var(--stone)]">role match control</p>
           <div className="mt-3 flex flex-wrap items-end gap-3">
-            <span className="numeric text-5xl font-semibold tracking-[-.05em] md:text-6xl">87.4%</span>
-            <span className="mb-2 rounded-full bg-[var(--paper)] px-3 py-1 text-xs font-semibold text-[var(--charcoal)]">+14.8 fit gain</span>
+            <span className="numeric text-5xl font-semibold tracking-[-.025em] md:text-6xl">
+              <CountUp from={0} to={87.4} duration={1.3} startWhen={countersActive} shuffle shuffleDuration={0.78} />%
+            </span>
+            <span className="mb-2 rounded-full bg-[var(--paper)] px-3 py-1 text-xs font-semibold text-[var(--charcoal)]">
+              +<CountUp from={0} to={14.8} delay={0.12} duration={1.05} startWhen={countersActive} shuffle shuffleDuration={0.65} /> fit gain
+            </span>
           </div>
         </div>
 
         <div className="mt-8 grid gap-3 md:grid-cols-3">
-          {[
-            ['Python', '28,500'],
-            ['Product analytics', '35,200'],
-            ['Workflow design', '24,300'],
-          ].map(([label, value]) => (
+          {signalStats.map(([label, value, delay]) => (
             <div key={label} className="rounded-lg border border-[var(--line)] bg-white/56 p-4">
-              <p className="numeric text-2xl font-semibold tracking-[-.04em]">{value}</p>
+              <p className="numeric text-2xl font-semibold tracking-[-.04em]">
+                <CountUp from={0} to={value} delay={delay * 0.35} duration={1.2} separator="," startWhen={countersActive} shuffle shuffleDuration={0.7} />
+              </p>
               <p className="mt-1 text-xs text-[var(--muted)]">{label}</p>
             </div>
           ))}
@@ -663,7 +673,9 @@ function DashboardPage() {
 
 function App() {
   const root = useRef<HTMLDivElement>(null)
+  const heroMatchRef = useRef<HTMLSpanElement>(null)
   const [route, setRoute] = useState(() => window.location.hash)
+  const [dashboardCountersActive, setDashboardCountersActive] = useState(false)
 
   useEffect(() => {
     const handleHashChange = () => setRoute(window.location.hash)
@@ -673,26 +685,23 @@ function App() {
 
   useLayoutEffect(() => {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reduceMotion || !root.current) return
+    if (reduceMotion) {
+      setDashboardCountersActive(true)
+      return
+    }
+    if (!root.current) return
+
+    setDashboardCountersActive(false)
 
     const cleanups: Array<() => void> = []
 
     const ctx = gsap.context(() => {
-      gsap.from('.nav-item', {
-        y: -14,
-        opacity: 0,
-        duration: 0.7,
-        stagger: 0.06,
-        ease: 'power3.out',
-      })
-
       gsap
         .timeline({ defaults: { ease: 'power3.out' } })
         .from('.hero-kicker', { y: 14, opacity: 0, duration: 0.7 }, 0.05)
-        .from('.hero-title span', { yPercent: 112, opacity: 0, duration: 0.9, stagger: 0.08 }, 0.16)
         .from('.hero-copy', { y: 18, opacity: 0, duration: 0.75 }, 0.55)
-        .from('.hero-cta', { y: 12, opacity: 0, duration: 0.55, stagger: 0.07 }, 0.72)
-        .from('.dashboard', { y: 90, opacity: 0, scale: 0.98, duration: 1 }, 0.42)
+        .from('.dashboard', { y: 90, opacity: 0, scale: 0.94, duration: 1.05 }, 0.42)
+        .call(() => setDashboardCountersActive(true), [], 0.42)
 
       gsap.to('.mist', {
         x: 34,
@@ -713,7 +722,7 @@ function App() {
         },
       })
 
-      gsap.utils.toArray<HTMLElement>('.reveal').forEach((item) => {
+      gsap.utils.toArray<HTMLElement>('.reveal:not(.workflow-step)').forEach((item) => {
         gsap.from(item, {
           y: 34,
           opacity: 0,
@@ -729,10 +738,12 @@ function App() {
       const workflowMap = root.current?.querySelector<HTMLElement>('.workflow-map')
       const workflowPath = root.current?.querySelector<SVGPathElement>('.workflow-path-progress')
       const matchStep = root.current?.querySelector<HTMLElement>('.workflow-match')
+      const workflowSteps = root.current ? Array.from(root.current.querySelectorAll<HTMLElement>('.workflow-step')) : []
 
       if (workflowMap && workflowPath && matchStep) {
         const pathLength = workflowPath.getTotalLength()
         const clampProgress = gsap.utils.clamp(0, 1)
+        const stepThresholds = [0.03, 0.47, 0.86]
 
         workflowPath.style.strokeDasharray = `${pathLength}`
         workflowPath.style.strokeDashoffset = `${pathLength}`
@@ -749,6 +760,10 @@ function App() {
 
           workflowPath.style.strokeDashoffset = `${pathLength * (1 - progress)}`
           workflowPath.style.stroke = `rgb(${grey}, ${grey}, ${greyBlue})`
+
+          workflowSteps.forEach((step, index) => {
+            step.classList.toggle('is-visible', progress >= stepThresholds[index])
+          })
         }
 
         const mapObserver = new IntersectionObserver(
@@ -759,19 +774,7 @@ function App() {
           { rootMargin: '20% 0px 20% 0px' },
         )
 
-        const stepObserver = new IntersectionObserver(
-          (entries) => {
-            entries.forEach((entry) => {
-              entry.target.classList.toggle('is-visible', entry.isIntersecting)
-            })
-          },
-          { threshold: 0.42 },
-        )
-
         mapObserver.observe(workflowMap)
-        root.current
-          ?.querySelectorAll<HTMLElement>('.workflow-step')
-          .forEach((step) => stepObserver.observe(step))
 
         window.addEventListener('scroll', drawWorkflowPath, { passive: true })
         window.addEventListener('resize', drawWorkflowPath)
@@ -779,23 +782,10 @@ function App() {
 
         cleanups.push(() => {
           mapObserver.disconnect()
-          stepObserver.disconnect()
           window.removeEventListener('scroll', drawWorkflowPath)
           window.removeEventListener('resize', drawWorkflowPath)
         })
       }
-
-      gsap.from('.workflow-node', {
-        scale: 0.9,
-        opacity: 0,
-        duration: 0.5,
-        stagger: 0.18,
-        ease: 'back.out(1.6)',
-        scrollTrigger: {
-          trigger: '.workflow-map',
-          start: 'top 70%',
-        },
-      })
 
       gsap.from('.graph-line', {
         opacity: 0,
@@ -945,15 +935,25 @@ function App() {
         <div className="relative z-10 mx-auto max-w-[112rem] px-5 pt-20 text-center md:px-10 md:pt-24">
           <p className="hero-kicker text-sm font-semibold uppercase tracking-[.08em] text-[var(--stone)]">Career intelligence reimagined</p>
           <div className="mt-5 overflow-hidden">
-            <h1 className="hero-title text-balance text-8xl tracking-loose font-semibold leading-[.92]">
+            <div className="hero-title text-balance text-8xl tracking-loose font-semibold leading-[.92]" role="heading" aria-level={1}>
               <span className="block text-[var(--silver)]">A new standard in</span>
-              <span className="block text-[var(--black)]">career matching</span>
-            </h1>
+              <span ref={heroMatchRef} className="block text-[var(--black)]">
+                <VariableProximity
+                  label="career matching"
+                  className="hero-proximity"
+                  fromFontVariationSettings="'wght' 620"
+                  toFontVariationSettings="'wght' 940"
+                  containerRef={heroMatchRef}
+                  radius={260}
+                  falloff="exponential"
+                />
+              </span>
+            </div>
           </div>
           <p className="hero-copy text-balance mx-auto mt-8 max-w-2xl text-lg text-[var(--muted)] md:text-xl">
             Upload once and turn scattered experience into a living skill profile, ranked opportunities, and clearer applications in real time.
           </p>
-          <DashboardMock />
+          <DashboardMock countersActive={dashboardCountersActive} />
         </div>
       </header>
 
@@ -973,7 +973,7 @@ function App() {
             </div>
 
             <div className="workflow-map relative mt-20 min-h-[58rem] md:min-h-[72rem]">
-              <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 1200 980" preserveAspectRatio="none" aria-hidden="true">
+              <svg className="pointer-events-none absolute inset-0 z-0 h-full w-full" viewBox="0 0 1200 980" preserveAspectRatio="none" aria-hidden="true">
                 <path
                   className="workflow-path-base"
                   d={workflowPath}
@@ -991,7 +991,7 @@ function App() {
                 />
               </svg>
 
-              <article className="reveal workflow-step workflow-upload md:absolute md:left-0 md:top-0 md:w-[37rem]">
+              <article className="workflow-step workflow-upload relative z-10 md:absolute md:left-0 md:top-0 md:w-[37rem]">
                 <div className="workflow-node numeric">01</div>
                 <div className="grid gap-6 rounded-2xl bg-white/58 p-7 shadow-[inset_0_1px_0_rgba(255,255,255,.78)] md:grid-cols-[8rem_1fr] md:p-8">
                   <h3 className="text-5xl font-semibold tracking-tight md:text-6xl">{steps[0][0]}</h3>
@@ -1007,7 +1007,7 @@ function App() {
                 </div>
               </article>
 
-              <article className="reveal workflow-step workflow-extract mt-10 md:absolute md:right-0 md:top-[24rem] md:mt-0 md:w-[40rem]">
+              <article className="workflow-step workflow-extract relative z-10 mt-10 md:absolute md:right-0 md:top-[24rem] md:mt-0 md:w-[40rem]">
                 <div className="workflow-node numeric md:ml-auto">02</div>
                 <div className="grid gap-6 rounded-2xl bg-[#d7d7d5]/76 p-7 shadow-[inset_0_1px_0_rgba(255,255,255,.56)] md:grid-cols-[1fr_10rem] md:p-8">
                   <div className="md:text-right">
@@ -1024,7 +1024,7 @@ function App() {
                 </div>
               </article>
 
-              <article className="reveal workflow-step workflow-match mx-auto mt-10 md:absolute md:bottom-0 md:left-1/2 md:mt-0 md:w-[36rem] md:-translate-x-1/2">
+              <article className="workflow-step workflow-match relative z-10 mx-auto mt-10 md:absolute md:bottom-0 md:left-1/2 md:mt-0 md:w-[36rem] md:-translate-x-1/2">
                 <div className="workflow-node numeric mx-auto">03</div>
                 <div className="rounded-2xl bg-[var(--black)] p-7 text-center text-white shadow-[0_30px_80px_rgba(5,5,5,.22)] md:p-8">
                   <h3 className="text-6xl font-semibold tracking-[-.07em] md:text-7xl">{steps[2][0]}</h3>
