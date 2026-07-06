@@ -3,6 +3,7 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { api, createMockToken } from './lib/api'
 import CountUp from './components/CountUp'
+import CurvedLoop from './components/CurvedLoop'
 import VariableProximity from './components/VariableProximity'
 import type { JobMatch, Profile } from './types'
 
@@ -44,120 +45,11 @@ function Icon({ name }: { name: 'search' | 'bell' | 'upload' | 'filter' | 'arrow
 const workflowPath =
   'M522 205 C604 220 625 292 575 370 C535 433 565 470 640 492 C704 511 752 529 780 565 C830 635 740 690 602 676 C500 666 430 642 410 714 C398 754 406 784 430 800'
 
-const graphNodes = [
-  { id: 'core', label: 'HUNTER CORE', x: 490, y: 350, anchor: 'middle', shape: 'core', tone: 'green', labelX: 0, labelY: -64, phase: 0.2, speed: 0.42, amp: 3 },
-  { id: 'node', label: 'Node.js', x: 302, y: 178, anchor: 'end', shape: 'circle', tone: 'purple', labelX: -22, labelY: -22, phase: 0.6, speed: 0.52, amp: 7 },
-  { id: 'leadership', label: 'Leadership', x: 480, y: 96, anchor: 'middle', shape: 'circle', tone: 'purple', labelX: 0, labelY: -28, phase: 1.4, speed: 0.46, amp: 6 },
-  { id: 'modeling', label: 'Data Modeling', x: 650, y: 145, anchor: 'start', shape: 'circle', tone: 'purple', labelX: 24, labelY: -18, phase: 2.2, speed: 0.5, amp: 7 },
-  { id: 'cicd', label: 'CI/CD', x: 763, y: 290, anchor: 'start', shape: 'circle', tone: 'purple', labelX: 24, labelY: 2, phase: 2.9, speed: 0.44, amp: 6 },
-  { id: 'product', label: 'Product', x: 742, y: 462, anchor: 'start', shape: 'circle', tone: 'purple', labelX: 24, labelY: 18, phase: 3.7, speed: 0.48, amp: 7 },
-  { id: 'python', label: 'Python', x: 612, y: 596, anchor: 'middle', shape: 'circle', tone: 'purple', labelX: 0, labelY: 42, phase: 4.5, speed: 0.43, amp: 6 },
-  { id: 'react', label: 'React', x: 432, y: 620, anchor: 'middle', shape: 'circle', tone: 'purple', labelX: 0, labelY: 42, phase: 5.2, speed: 0.5, amp: 6 },
-  { id: 'typescript', label: 'TypeScript', x: 270, y: 525, anchor: 'end', shape: 'circle', tone: 'purple', labelX: -22, labelY: 24, phase: 5.9, speed: 0.47, amp: 7 },
-  { id: 'systems', label: 'Systems Design', x: 215, y: 342, anchor: 'end', shape: 'circle', tone: 'purple', labelX: -22, labelY: 4, phase: 6.6, speed: 0.45, amp: 6 },
+const jobPlatforms = [
+  { name: 'LinkedIn', mark: 'in', className: 'platform-linkedin' },
+  { name: 'Naukri', mark: 'n', className: 'platform-naukri' },
+  { name: 'Internshala', mark: 'i', className: 'platform-internshala' },
 ] as const
-
-const graphLinks = [
-  ['core', 'node', 'dashed'],
-  ['core', 'leadership', 'solid'],
-  ['core', 'modeling', 'solid'],
-  ['core', 'cicd', 'dashed'],
-  ['core', 'product', 'solid'],
-  ['core', 'python', 'dashed'],
-  ['core', 'react', 'solid'],
-  ['core', 'typescript', 'dashed'],
-  ['core', 'systems', 'solid'],
-  ['node', 'product', 'soft'],
-  ['leadership', 'python', 'soft'],
-  ['modeling', 'systems', 'soft'],
-  ['cicd', 'react', 'soft'],
-  ['systems', 'react', 'soft'],
-  ['typescript', 'node', 'soft'],
-] as const
-
-function SkillGraph() {
-  const nodes = Object.fromEntries(graphNodes.map((node) => [node.id, node]))
-
-  return (
-    <div className="skill-graph-wrap reveal relative mx-auto mt-16 w-[min(52rem,94vw)] md:mt-0">
-      <svg
-        className="skill-graph h-auto w-full overflow-visible"
-        viewBox="0 0 980 700"
-        role="img"
-        aria-label="Network map connecting Hunter Core to skill intelligence layers and infrastructure"
-      >
-        <defs>
-          <filter id="networkGlow" x="-80%" y="-80%" width="260%" height="260%">
-            <feGaussianBlur stdDeviation="5" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-        </defs>
-
-        {graphLinks.map(([from, to, type]) => (
-          <line
-            key={`${from}-${to}`}
-            className={`graph-line graph-line-${type}`}
-            data-from={from}
-            data-to={to}
-            x1={nodes[from].x}
-            y1={nodes[from].y}
-            x2={nodes[to].x}
-            y2={nodes[to].y}
-          />
-        ))}
-
-        <g className="graph-core-frame" transform="translate(490 350)">
-          <path d="M-72-72h34M-72-72v34M72-72h-34M72-72v34M-72 72h34M-72 72v-34M72 72h-34M72 72v-34" />
-        </g>
-
-        {graphNodes.map((node) => (
-          <g
-            key={node.id}
-            className={`graph-node-group graph-node-${node.shape} graph-node-${node.tone}`}
-            data-node-id={node.id}
-            data-x={node.x}
-            data-y={node.y}
-            data-phase={node.phase}
-            data-speed={node.speed}
-            data-amp={node.amp}
-            transform={`translate(${node.x} ${node.y})`}
-          >
-            {node.shape === 'circle' && <circle className="graph-node-shape" r="12" />}
-            {node.shape === 'core' && (
-              <>
-                <circle className="graph-core-glow" r="28" />
-                <circle className="graph-node-shape" r="22" />
-                <text className="graph-core-mark" textAnchor="middle" dominantBaseline="middle" x="0" y="1" fontSize="18" fontWeight="700">
-                  H
-                </text>
-              </>
-            )}
-            {node.label && (
-            <text
-                className="graph-label"
-                x={node.labelX}
-                y={node.labelY}
-                textAnchor={node.anchor}
-              >
-                {node.label.split('\n').map((line, index) => (
-                  <tspan key={line} x={node.labelX} dy={index === 0 ? 0 : 22}>
-                    {line}
-                  </tspan>
-                ))}
-            </text>
-            )}
-          </g>
-        ))}
-
-        <text className="graph-core-copy" x="490" y="430" textAnchor="middle">
-          <tspan x="490">Unified profile system</tspan>
-          <tspan x="490" dy="22">AI-powered extraction</tspan>
-          <tspan x="490" dy="22">Central skill layer</tspan>
-        </text>
-      </svg>
-    </div>
-  )
-}
 
 function DashboardMock({ countersActive }: { countersActive: boolean }) {
   const signalStats = [
@@ -787,101 +679,17 @@ function App() {
         })
       }
 
-      gsap.from('.graph-line', {
+      gsap.from('.platform-card', {
+        y: 26,
         opacity: 0,
-        scale: 0.82,
-        transformOrigin: 'center center',
-        duration: 1,
-        stagger: 0.025,
-        ease: 'power2.out',
+        duration: 0.72,
+        stagger: 0.08,
+        ease: 'power3.out',
         scrollTrigger: {
-          trigger: '.skill-graph-wrap',
-          start: 'top 72%',
+          trigger: '.platform-source-section',
+          start: 'top 68%',
         },
       })
-
-      gsap.from('.graph-node-shape, .graph-core-copy', {
-        opacity: 0,
-        scale: 0.55,
-        transformOrigin: 'center center',
-        duration: 0.7,
-        stagger: 0.045,
-        ease: 'back.out(1.7)',
-        scrollTrigger: {
-          trigger: '.skill-graph-wrap',
-          start: 'top 70%',
-        },
-      })
-
-      const graphWrap = root.current?.querySelector<HTMLElement>('.skill-graph-wrap')
-      const graphNodeGroups = gsap.utils.toArray<SVGGElement>('.graph-node-group')
-      const graphLines = gsap.utils.toArray<SVGLineElement>('.graph-line')
-
-      if (graphWrap && graphNodeGroups.length && graphLines.length) {
-        const nodePositions = new Map<string, { x: number; y: number }>()
-        const graphStart = performance.now()
-
-        const syncGraphLines = () => {
-          graphNodeGroups.forEach((node) => {
-            const id = node.dataset.nodeId
-            const baseX = Number(node.dataset.x)
-            const baseY = Number(node.dataset.y)
-            if (!id) return
-            const currentX = Number(node.dataset.currentX ?? baseX)
-            const currentY = Number(node.dataset.currentY ?? baseY)
-            nodePositions.set(id, {
-              x: currentX,
-              y: currentY,
-            })
-          })
-
-          graphLines.forEach((line) => {
-            const from = nodePositions.get(line.dataset.from ?? '')
-            const to = nodePositions.get(line.dataset.to ?? '')
-            if (!from || !to) return
-            line.setAttribute('x1', `${from.x}`)
-            line.setAttribute('y1', `${from.y}`)
-            line.setAttribute('x2', `${to.x}`)
-            line.setAttribute('y2', `${to.y}`)
-          })
-        }
-
-        const floatGraph = () => {
-          const elapsed = (performance.now() - graphStart) / 1000
-          graphNodeGroups.forEach((node) => {
-            const amp = Number(node.dataset.amp)
-            const phase = Number(node.dataset.phase)
-            const speed = Number(node.dataset.speed)
-            const x = Math.sin(elapsed * speed + phase) * amp
-            const y = Math.sin(elapsed * (speed * 1.82) + phase * 5.7) * amp
-            const baseX = Number(node.dataset.x)
-            const baseY = Number(node.dataset.y)
-            const currentX = baseX + x
-            const currentY = baseY + y
-            node.dataset.currentX = `${currentX}`
-            node.dataset.currentY = `${currentY}`
-            node.setAttribute('transform', `translate(${currentX} ${currentY})`)
-          })
-          syncGraphLines()
-        }
-
-        gsap.ticker.add(floatGraph)
-
-        gsap.to('.graph-core-frame', {
-          scale: 1.025,
-          transformOrigin: 'center center',
-          duration: 8,
-          repeat: -1,
-          yoyo: true,
-          ease: 'sine.inOut',
-        })
-
-        syncGraphLines()
-        cleanups.push(() => {
-          gsap.ticker.remove(floatGraph)
-          gsap.killTweensOf('.graph-core-frame')
-        })
-      }
     }, root)
 
     return () => {
@@ -1040,19 +848,32 @@ function App() {
           </div>
         </section>
 
-        <section className="section-rule skill-section relative overflow-hidden px-5 py-24 md:px-10 md:py-32">
-          <div className="mx-auto grid max-w-[92rem] gap-12 md:min-h-[52rem] md:grid-cols-[.9fr_1.1fr] md:items-start">
-            <div className="reveal relative z-10 self-start md:pt-8">
-              <p className="text-sm font-medium uppercase tracking-[.22em] text-[rgba(5,5,5,.36)]">Intelligence</p>
-              <h2 className="text-balance mt-4 max-w-4xl text-5xl font-semibold leading-[.95] tracking-[-.06em] text-[var(--black)] md:text-7xl">
-                Skill extraction with context attached.
-              </h2>
-              <p className="mt-10 max-w-2xl text-2xl leading-[1.65] tracking-[-.035em] text-[rgba(5,5,5,.46)] md:text-3xl">
-                Your resume holds more than you wrote. Watch our AI surface what matters.
-              </p>
+        <section className="section-rule platform-source-section relative overflow-hidden px-5 py-24 md:px-10 md:py-32">
+          <div className="source-halo" aria-hidden="true" />
+          <div className="relative z-10 mx-auto flex min-h-[44rem] max-w-[92rem] flex-col items-center justify-center text-center">
+            <p className="reveal source-label">Job suggestions from these platforms</p>
+            <h2 className="reveal text-balance mt-5 max-w-5xl text-5xl font-semibold leading-[.95] tracking-[-.04em] text-[var(--black)] md:text-8xl">
+              One resume, three live job markets.
+            </h2>
+
+            <div className="source-orbit reveal mt-12 w-full max-w-6xl" aria-label="LinkedIn, Naukri, and Internshala job source animation">
+              <CurvedLoop
+                marqueeText="LinkedIn ✦ Naukri ✦ Internshala ✦"
+                speed={1.35}
+                curveAmount={260}
+                direction="right"
+                interactive
+                className="source-loop-text"
+              />
             </div>
-            <div className="relative z-10 md:self-start md:translate-x-12">
-              <SkillGraph />
+
+            <div className="platform-grid mt-10" aria-label="Supported job platforms">
+              {jobPlatforms.map((platform) => (
+                <article key={platform.name} className={`platform-card ${platform.className}`}>
+                  <span className="platform-mark" aria-hidden="true">{platform.mark}</span>
+                  <span className="platform-name">{platform.name}</span>
+                </article>
+              ))}
             </div>
           </div>
         </section>
